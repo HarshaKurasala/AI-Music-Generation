@@ -1,8 +1,8 @@
 {
-  "trained_at": "2026-05-25T21:21:27.030340",
+  "trained_at": "2026-05-26T11:31:55.679922",
   "files": [
-    "Akhiyaan Gukaab(pianopalmidi.blogspot.com).mid",
-    "Pirates of the Caribbean - He's a Pirate (3).mid"
+    "Pirates of the Caribbean - He's a Pirate (3).mid",
+    "Akhiyaan Gukaab(pianopalmidi.blogspot.com).mid"
   ],
   "model_path": "models/music_model.keras",
   "vocab_path": "models/vocab.json"

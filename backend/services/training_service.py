@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import threading
 from datetime import datetime
-from tensorflow import keras
+import tensorflow as tf
 
 from utils.midi_utils import load_all_notes, build_sequences
 from models.lstm_model import build_lstm_model
@@ -62,7 +62,7 @@ class TrainingService:
 
             # Custom callback to track training progress
             # Updates status after each epoch with loss and accuracy
-            class ProgressCallback(keras.callbacks.Callback):
+            class ProgressCallback(tf.keras.callbacks.Callback):
                 def __init__(cb_self):
                     super().__init__()
                     cb_self.best_loss = float('inf')

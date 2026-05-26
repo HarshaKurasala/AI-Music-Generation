@@ -92,8 +92,8 @@ export default function TrainingDashboard() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-white">Training Dashboard</h1>
-        <p className="text-gray-400 mt-2">Configure and train the LSTM model on your MIDI dataset.</p>
+        <h1 className="text-3xl font-bold text-gray-900">Training Dashboard</h1>
+        <p className="text-gray-600 mt-2">Configure and train the LSTM model on your MIDI dataset.</p>
       </div>
 
       {datasetCount === 0 && (

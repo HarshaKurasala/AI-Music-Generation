@@ -17,6 +17,11 @@ class GenerateRequest(BaseModel):
     num_notes: int = Field(default=100, ge=20, le=500)
     temperature: float = Field(default=1.0, ge=0.1, le=2.0)
     instrument: str = Field(default="piano")
+    style: str = Field(default="cinematic")
+    key: str = Field(default="C")
+    tempo: int = Field(default=92, ge=55, le=170)
+    density: float = Field(default=0.7, ge=0.2, le=1.0)
+    harmony: bool = Field(default=True)
 
 
 # Generate new MIDI music sequence using trained LSTM model
@@ -29,7 +34,12 @@ def generate_music(request: GenerateRequest):
         filename = generation_service.generate(
             num_notes=request.num_notes,
             temperature=request.temperature,
-            instrument=request.instrument
+            instrument=request.instrument,
+            style=request.style,
+            key=request.key,
+            tempo=request.tempo,
+            density=request.density,
+            harmony=request.harmony
         )
         return JSONResponse({
             "filename": filename,

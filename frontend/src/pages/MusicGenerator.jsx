@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Bot, ExternalLink, Trash2 } from 'lucide-react'
 import GenerateMusicForm from '../components/GenerateMusicForm'
 import MusicPlayer from '../components/MusicPlayer'
-import { getGeneratedFiles, deleteGeneratedFiles, getTrainedModelInfo } from '../services/api'
+import { deleteGeneratedFiles, getGeneratedFiles, getTrainedModelInfo } from '../services/api'
 
 export default function MusicGenerator() {
   const [result, setResult] = useState(null)
@@ -41,7 +42,7 @@ export default function MusicGenerator() {
   const handleGenerated = (data) => {
     setResult(data)
     loadGeneratedFiles()
-    loadTrainedModelInfo()  // Refresh in case model was updated
+    loadTrainedModelInfo()
   }
 
   const toggleFileSelection = (file) => {
@@ -51,11 +52,7 @@ export default function MusicGenerator() {
   }
 
   const toggleAllFiles = () => {
-    if (selectedFiles.length === generatedFiles.length) {
-      setSelectedFiles([])
-    } else {
-      setSelectedFiles([...generatedFiles])
-    }
+    setSelectedFiles(prev => prev.length === generatedFiles.length ? [] : [...generatedFiles])
   }
 
   const handleDeleteFiles = async () => {
@@ -82,17 +79,16 @@ export default function MusicGenerator() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10 space-y-8">
+    <div className="mx-auto max-w-4xl px-4 py-10 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Music Generator</h1>
-        <p className="text-gray-700 mt-2">Configure parameters and generate a new AI music composition.</p>
+        <h1 className="text-3xl font-bold text-gray-900">AI Music Composer</h1>
+        <p className="text-gray-700 mt-2">Shape a trained LSTM melody into a key-aware, humanized MIDI composition.</p>
       </div>
 
-      {/* Trained Model Info Section */}
       {trainedModelInfo && (
-        <div className={`rounded-lg p-4 border-2 ${trainedModelInfo.trained_at ? 'border-blue-300 bg-blue-50' : 'border-gray-300 bg-gray-100'}`}>
+        <div className={`rounded-md p-4 border ${trainedModelInfo.trained_at ? 'border-blue-300 bg-blue-50' : 'border-gray-300 bg-gray-100'}`}>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-lg">🤖</span>
+            <Bot size={20} className={trainedModelInfo.trained_at ? 'text-blue-700' : 'text-gray-500'} />
             <h3 className="text-lg font-semibold text-gray-900">
               {trainedModelInfo.trained_at ? 'Trained Model Ready' : 'No Trained Model'}
             </h3>
@@ -100,17 +96,17 @@ export default function MusicGenerator() {
           {trainedModelInfo.trained_at ? (
             <div className="space-y-2 text-sm">
               <div className="text-gray-800">
-                <span className="text-gray-700">Trained on:</span> {' '}
-                {Array.isArray(trainedModelInfo.files) 
-                  ? trainedModelInfo.files.join(', ') 
+                <span className="text-gray-700">Trained on:</span>{' '}
+                {Array.isArray(trainedModelInfo.files)
+                  ? trainedModelInfo.files.join(', ')
                   : 'All dataset files'}
               </div>
-              <div className="text-gray-700 text-xs">
+              <div className="text-xs text-gray-700">
                 {new Date(trainedModelInfo.trained_at).toLocaleString()}
               </div>
             </div>
           ) : (
-            <p className="text-gray-700 text-sm">
+            <p className="text-sm text-gray-700">
               Train a model on the Training Dashboard to generate music.
             </p>
           )}
@@ -121,22 +117,20 @@ export default function MusicGenerator() {
 
       {result && (
         <div className="space-y-4">
-          <MusicPlayer
-            src={result.stream_url}
-            filename={result.filename}
-          />
-          <button onClick={() => navigate('/results')} className="btn-secondary w-full">
-            View All Generated Files →
+          <MusicPlayer src={result.stream_url} filename={result.filename} />
+          <button onClick={() => navigate('/results')} className="btn-secondary w-full gap-2">
+            View All Generated Files
+            <ExternalLink size={16} />
           </button>
         </div>
       )}
 
-      {/* Manage Generated Files Section */}
       {generatedFiles.length > 0 && (
-        <div className="bg-white rounded-lg p-6 space-y-4 border border-gray-300">
+        <div className="bg-white rounded-md p-6 space-y-4 border border-gray-300">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <span>🗑️</span> Manage Generated Files
+              <Trash2 size={20} className="text-gray-600" />
+              Manage Generated Files
             </h2>
             <span className="text-sm text-gray-700">
               {selectedFiles.length} selected
