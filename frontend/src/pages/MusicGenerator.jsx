@@ -1,28 +1,43 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bot, ExternalLink, Trash2 } from 'lucide-react'
+import ConfirmDialog from '../components/ConfirmDialog'
 import GenerateMusicForm from '../components/GenerateMusicForm'
 import MusicPlayer from '../components/MusicPlayer'
-import { deleteGeneratedFiles, getGeneratedFiles, getTrainedModelInfo } from '../services/api'
+import { deleteGeneratedFiles, getGeneratedFiles, getTrainedModelInfo, getTrainingStatus } from '../services/api'
 
 export default function MusicGenerator() {
   const [result, setResult] = useState(null)
   const [generatedFiles, setGeneratedFiles] = useState([])
   const [selectedFiles, setSelectedFiles] = useState([])
   const [deleting, setDeleting] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [error, setError] = useState(null)
   const [trainedModelInfo, setTrainedModelInfo] = useState(null)
+  const [trainingStatus, setTrainingStatus] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
     loadGeneratedFiles()
     loadTrainedModelInfo()
+    loadTrainingStatus()
+
+    const refreshInterval = setInterval(() => {
+      loadGeneratedFiles()
+      loadTrainedModelInfo()
+      loadTrainingStatus()
+    }, 5000)
+
+    return () => clearInterval(refreshInterval)
   }, [])
 
   const loadGeneratedFiles = async () => {
     try {
       const res = await getGeneratedFiles()
-      setGeneratedFiles(res.data.files || [])
+      const files = res.data.files || []
+      setGeneratedFiles(files)
+      setSelectedFiles(prev => prev.filter(file => files.includes(file)))
+      setResult(prev => prev && files.includes(prev.filename) ? prev : null)
       setError(null)
     } catch (err) {
       console.error('Failed to load generated files:', err)
@@ -36,6 +51,18 @@ export default function MusicGenerator() {
       setTrainedModelInfo(res.data)
     } catch (err) {
       console.error('Failed to load trained model info:', err)
+    }
+  }
+
+  const loadTrainingStatus = async () => {
+    try {
+      const res = await getTrainingStatus()
+      setTrainingStatus(res.data)
+      if (res.data.state === 'completed') {
+        loadTrainedModelInfo()
+      }
+    } catch (err) {
+      console.error('Failed to load training status:', err)
     }
   }
 
@@ -61,7 +88,12 @@ export default function MusicGenerator() {
       return
     }
 
-    if (!confirm(`Delete ${selectedFiles.length} file(s)?`)) {
+    setConfirmDeleteOpen(true)
+  }
+
+  const confirmDeleteFiles = async () => {
+    if (selectedFiles.length === 0) {
+      setConfirmDeleteOpen(false)
       return
     }
 
@@ -69,8 +101,11 @@ export default function MusicGenerator() {
     setError(null)
     try {
       await deleteGeneratedFiles(selectedFiles)
+      setResult(prev => prev && selectedFiles.includes(prev.filename) ? null : prev)
       setSelectedFiles([])
+      setConfirmDeleteOpen(false)
       await loadGeneratedFiles()
+      await loadTrainedModelInfo()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -98,9 +133,18 @@ export default function MusicGenerator() {
               <div className="text-gray-800">
                 <span className="text-gray-700">Trained on:</span>{' '}
                 {Array.isArray(trainedModelInfo.files)
-                  ? trainedModelInfo.files.join(', ')
+                  ? `${trainedModelInfo.files.length} file${trainedModelInfo.files.length === 1 ? '' : 's'}`
                   : 'All dataset files'}
               </div>
+              {Array.isArray(trainedModelInfo.files) && trainedModelInfo.files.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {trainedModelInfo.files.map(file => (
+                    <span key={file} className="max-w-full truncate rounded border border-blue-200 bg-white px-2 py-1 text-xs text-blue-800">
+                      {file}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="text-xs text-gray-700">
                 {new Date(trainedModelInfo.trained_at).toLocaleString()}
               </div>
@@ -110,6 +154,20 @@ export default function MusicGenerator() {
               Train a model on the Training Dashboard to generate music.
             </p>
           )}
+        </div>
+      )}
+
+      {(trainingStatus?.state === 'preparing' || trainingStatus?.state === 'training') && (
+        <div className="rounded-md border border-yellow-300 bg-yellow-50 p-4">
+          <p className="text-sm font-medium text-yellow-900">
+            {trainingStatus.state === 'preparing'
+              ? 'MIDI files are being prepared for training.'
+              : 'MIDI files are currently training.'}
+            {' '}Model info will update automatically when training completes.
+          </p>
+          <p className="mt-1 text-xs text-yellow-800">
+            Epoch {trainingStatus.epoch || 0} / {trainingStatus.total_epochs || 0}
+          </p>
         </div>
       )}
 
@@ -188,6 +246,15 @@ export default function MusicGenerator() {
           </button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Delete generated files?"
+        message={`${selectedFiles.length} selected generated file${selectedFiles.length === 1 ? '' : 's'} will be permanently removed.`}
+        loading={deleting}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={confirmDeleteFiles}
+      />
     </div>
   )
 }

@@ -25,6 +25,10 @@ export const uploadMidi = (files) => {
 // Returns list of files and count
 export const getDatasetInfo = () => api.get('/dataset-info')
 
+// Delete selected MIDI files from the training dataset
+// Removes files from the backend dataset directory
+export const deleteDatasetFiles = (files) => api.post('/delete-dataset-files', { files })
+
 // Start model training with specified parameters
 // Schedules training as background task
 export const trainModel = (config) => api.post('/train-model', config)

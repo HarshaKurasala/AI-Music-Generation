@@ -2,12 +2,17 @@ import os
 import logging
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 import aiofiles
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "dataset")
+
+
+class DeleteDatasetFilesRequest(BaseModel):
+    files: list[str] = Field(..., description="List of dataset MIDI filenames to delete")
 
 
 # Upload one or more MIDI files to the dataset directory
@@ -56,3 +61,49 @@ def dataset_info():
 
     files = [f for f in os.listdir(UPLOAD_DIR) if f.endswith((".mid", ".midi"))]
     return {"files": files, "count": len(files)}
+
+
+# Delete selected MIDI files from the training dataset
+# Validates filenames to prevent deleting files outside the dataset directory
+@router.post("/delete-dataset-files")
+def delete_dataset_files(request: DeleteDatasetFilesRequest):
+    if not request.files:
+        raise HTTPException(status_code=400, detail="No files specified for deletion")
+
+    deleted = []
+    errors = []
+
+    for filename in request.files:
+        try:
+            if (
+                ".." in filename
+                or "/" in filename
+                or "\\" in filename
+                or not filename.endswith((".mid", ".midi"))
+            ):
+                errors.append(f"{filename}: Invalid filename")
+                continue
+
+            path = os.path.join(UPLOAD_DIR, filename)
+            if not os.path.exists(path):
+                errors.append(f"{filename}: File not found")
+                continue
+
+            os.remove(path)
+            deleted.append(filename)
+            logger.info(f"Deleted dataset file: {filename}")
+        except Exception as e:
+            errors.append(f"{filename}: {str(e)}")
+            logger.error(f"Failed to delete dataset file {filename}: {e}")
+
+    remaining_files = []
+    if os.path.exists(UPLOAD_DIR):
+        remaining_files = [f for f in os.listdir(UPLOAD_DIR) if f.endswith((".mid", ".midi"))]
+
+    return JSONResponse({
+        "deleted": deleted,
+        "errors": errors,
+        "remaining_files": remaining_files,
+        "total_files": len(remaining_files),
+        "message": f"Deleted {len(deleted)} file(s)"
+    })

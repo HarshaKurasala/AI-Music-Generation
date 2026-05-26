@@ -26,6 +26,21 @@ class TrainingService:
         self._status = {"state": "idle", "epoch": 0, "total_epochs": 0, "loss": [], "accuracy": [], "message": ""}
         self.trained_files = None
 
+    # Mark training as queued before the background task starts
+    # Keeps UI status stable when users navigate away immediately after clicking train
+    def begin_training(self, epochs: int, files: list[str] = None):
+        self.is_training = True
+        self.trained_files = files
+        self._status = {
+            "state": "preparing",
+            "epoch": 0,
+            "total_epochs": epochs,
+            "loss": [],
+            "accuracy": [],
+            "message": "Training queued. Preparing dataset...",
+            "files": files or "all"
+        }
+
     # Get current training status
     # Returns a copy of the status dictionary to prevent external modification
     def get_status(self) -> dict:
@@ -36,7 +51,15 @@ class TrainingService:
     # Parameters: epochs (number of epochs), batch_size (batch size), seq_length (sequence length), files (optional specific files)
     def train(self, epochs: int, batch_size: int, seq_length: int, files: list[str] = None):
         self.is_training = True
-        self._status = {"state": "preparing", "epoch": 0, "total_epochs": epochs, "loss": [], "accuracy": [], "message": "Loading MIDI files..."}
+        self._status = {
+            "state": "preparing",
+            "epoch": 0,
+            "total_epochs": epochs,
+            "loss": [],
+            "accuracy": [],
+            "message": "Loading MIDI files...",
+            "files": files or "all"
+        }
 
         try:
             notes = load_all_notes(files=files)
@@ -89,6 +112,7 @@ class TrainingService:
 
             self._status["state"] = "completed"
             self._status["message"] = "Training complete. Model saved."
+            self._status["files"] = files or "all"
             
             self._save_model_metadata(files)
             
@@ -97,6 +121,7 @@ class TrainingService:
         except Exception as e:
             self._status["state"] = "error"
             self._status["message"] = str(e)
+            self._status["files"] = files or "all"
             logger.error(f"Training failed: {e}")
         finally:
             self.is_training = False

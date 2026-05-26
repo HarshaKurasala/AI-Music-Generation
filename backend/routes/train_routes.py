@@ -26,6 +26,11 @@ async def train_model(request: TrainRequest, background_tasks: BackgroundTasks):
     if training_service.is_training:
         raise HTTPException(status_code=409, detail="Training already in progress")
 
+    training_service.begin_training(
+        epochs=request.epochs,
+        files=request.files
+    )
+
     background_tasks.add_task(
         training_service.train,
         epochs=request.epochs,
@@ -54,7 +59,7 @@ def training_status():
 @router.post("/reset-training")
 def reset_training():
     training_service.is_training = False
-    training_service._status = {"state": "idle", "epoch": 0, "total_epochs": 0, "loss": [], "accuracy": [], "message": "Training reset"}
+    training_service._status = {"state": "idle", "epoch": 0, "total_epochs": 0, "loss": [], "accuracy": [], "message": "Training reset", "files": None}
     return JSONResponse({"message": "Training state reset successfully"})
 
 

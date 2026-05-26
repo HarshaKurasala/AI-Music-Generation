@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FileMusic, RefreshCw, Trash2 } from 'lucide-react'
 import MusicPlayer from '../components/MusicPlayer'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { getGeneratedFiles, deleteGeneratedFiles } from '../services/api'
 
 export default function Results() {
@@ -8,6 +9,7 @@ export default function Results() {
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(null)
+  const [pendingDelete, setPendingDelete] = useState(null)
   const [error, setError] = useState(null)
 
   const refresh = async () => {
@@ -24,13 +26,18 @@ export default function Results() {
   }
 
   const handleDelete = async (filename) => {
-    if (!confirm(`Delete ${filename}?`)) return
+    setPendingDelete(filename)
+  }
 
-    setDeleting(filename)
+  const confirmDelete = async () => {
+    if (!pendingDelete) return
+
+    setDeleting(pendingDelete)
     setError(null)
     try {
-      await deleteGeneratedFiles([filename])
-      if (selected === filename) setSelected(null)
+      await deleteGeneratedFiles([pendingDelete])
+      if (selected === pendingDelete) setSelected(null)
+      setPendingDelete(null)
       await refresh()
     } catch (err) {
       setError(err.message)
@@ -129,6 +136,15 @@ export default function Results() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete generated file?"
+        message={pendingDelete ? `"${pendingDelete}" will be permanently removed.` : ''}
+        loading={Boolean(deleting)}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

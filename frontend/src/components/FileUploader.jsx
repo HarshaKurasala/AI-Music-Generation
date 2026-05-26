@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { UploadCloud, X, FileMusic } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { uploadMidi } from '../services/api'
+import ConfirmDialog from './ConfirmDialog'
 
 // FileUploader component - handles MIDI file selection and upload
 // Provides drag-and-drop and click-to-upload interface
@@ -9,6 +10,7 @@ export default function FileUploader({ onUploadSuccess }) {
   const [files, setFiles] = useState([])
   const [dragging, setDragging] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [pendingRemove, setPendingRemove] = useState(null)
 
   // Add files to selected files list
   // Validates file types and prevents duplicates
@@ -46,6 +48,16 @@ export default function FileUploader({ onUploadSuccess }) {
     }
   }
 
+  const removePendingFile = (index, filename) => {
+    setPendingRemove({ index, filename })
+  }
+
+  const confirmRemovePendingFile = () => {
+    if (!pendingRemove) return
+    setFiles(prev => prev.filter((_, j) => j !== pendingRemove.index))
+    setPendingRemove(null)
+  }
+
   return (
     <div className="space-y-4">
       <div
@@ -79,7 +91,12 @@ export default function FileUploader({ onUploadSuccess }) {
                 {f.name}
                 <span className="text-gray-600">({(f.size / 1024).toFixed(1)} KB)</span>
               </div>
-              <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))}>
+              <button
+                type="button"
+                onClick={() => removePendingFile(i, f.name)}
+                title={`Remove ${f.name}`}
+                aria-label={`Remove ${f.name}`}
+              >
                 <X size={16} className="text-gray-600 hover:text-red-500" />
               </button>
             </li>
@@ -90,6 +107,14 @@ export default function FileUploader({ onUploadSuccess }) {
       <button onClick={handleUpload} disabled={loading || !files.length} className="btn-primary w-full">
         {loading ? 'Uploading...' : `Upload ${files.length || ''} File${files.length !== 1 ? 's' : ''}`}
       </button>
+
+      <ConfirmDialog
+        open={Boolean(pendingRemove)}
+        title="Remove selected file?"
+        message={pendingRemove ? `"${pendingRemove.filename}" will be removed from the upload list.` : ''}
+        onCancel={() => setPendingRemove(null)}
+        onConfirm={confirmRemovePendingFile}
+      />
     </div>
   )
 }

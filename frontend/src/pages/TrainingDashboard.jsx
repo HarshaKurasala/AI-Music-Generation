@@ -4,15 +4,20 @@ import toast from 'react-hot-toast'
 import TrainingProgress from '../components/TrainingProgress'
 import { trainModel, getTrainingStatus, getDatasetInfo, resetTraining } from '../services/api'
 
+const DEFAULT_CONFIG = { epochs: 50, batch_size: 64, seq_length: 50 }
+
 export default function TrainingDashboard() {
-  const [config, setConfig] = useState({ epochs: 50, batch_size: 64, seq_length: 50 })
+  const [config, setConfig] = useState(DEFAULT_CONFIG)
   const [status, setStatus] = useState({ state: 'idle', epoch: 0, total_epochs: 0, loss: [], accuracy: [], message: '' })
-  const [datasetCount, setDatasetCount] = useState(0)
+  const [datasetCount, setDatasetCount] = useState(null)
+  const [datasetLoading, setDatasetLoading] = useState(true)
   const [midiFiles, setMidiFiles] = useState([])
   const [selectedFiles, setSelectedFiles] = useState([])
   const pollRef = useRef(null)
+  const terminalStateRef = useRef(null)
 
   const set = (k, v) => setConfig(prev => ({ ...prev, [k]: v }))
+  const isActiveTrainingState = (state) => state === 'training' || state === 'preparing'
 
   const toggleFileSelection = (file) => {
     setSelectedFiles(prev =>
@@ -36,28 +41,68 @@ export default function TrainingDashboard() {
         const { data } = await getDatasetInfo()
         setDatasetCount(data.count)
         setMidiFiles(data.files || [])
+        setSelectedFiles(prev => prev.filter(file => (data.files || []).includes(file)))
       } catch (_) {}
+      finally {
+        setDatasetLoading(false)
+      }
     }
     checkDataset()
     const interval = setInterval(checkDataset, 5000)
     return () => clearInterval(interval)
   }, [])
 
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }
+
+  const applyTrainingStatus = (data, notify = false) => {
+    setStatus(data)
+
+    if (data.state === 'completed' || data.state === 'error') {
+      stopPolling()
+
+      if (notify && terminalStateRef.current !== data.state) {
+        terminalStateRef.current = data.state
+        if (data.state === 'completed') toast.success('Training complete!')
+        else toast.error('Training failed: ' + data.message)
+      }
+    } else if (isActiveTrainingState(data.state)) {
+      terminalStateRef.current = null
+    }
+  }
+
+  const fetchTrainingStatus = async (notify = false) => {
+    try {
+      const { data } = await getTrainingStatus()
+      applyTrainingStatus(data, notify)
+      return data
+    } catch (_) {
+      return null
+    }
+  }
+
   const startPolling = () => {
+    stopPolling()
     pollRef.current = setInterval(async () => {
-      try {
-        const { data } = await getTrainingStatus()
-        setStatus(data)
-        if (data.state === 'completed' || data.state === 'error') {
-          clearInterval(pollRef.current)
-          if (data.state === 'completed') toast.success('Training complete!')
-          else toast.error('Training failed: ' + data.message)
-        }
-      } catch (_) {}
+      await fetchTrainingStatus(true)
     }, 2000)
   }
 
-  useEffect(() => () => clearInterval(pollRef.current), [])
+  useEffect(() => {
+    const syncTraining = async () => {
+      const data = await fetchTrainingStatus(false)
+      if (data && isActiveTrainingState(data.state)) {
+        startPolling()
+      }
+    }
+
+    syncTraining()
+    return stopPolling
+  }, [])
 
   const handleTrain = async () => {
     if (datasetCount === 0) {
@@ -70,7 +115,16 @@ export default function TrainingDashboard() {
     }
     try {
       await trainModel({ ...config, files: selectedFiles })
+      setStatus({
+        state: 'preparing',
+        epoch: 0,
+        total_epochs: config.epochs,
+        loss: [],
+        accuracy: [],
+        message: 'Training started. Preparing dataset...'
+      })
       toast.success('Training started!')
+      await fetchTrainingStatus(false)
       startPolling()
     } catch (e) {
       toast.error(e.message)
@@ -80,11 +134,17 @@ export default function TrainingDashboard() {
   const handleReset = async () => {
     try {
       await resetTraining()
+      stopPolling()
       setStatus({ state: 'idle', epoch: 0, total_epochs: 0, loss: [], accuracy: [], message: 'Training reset' })
       toast.success('Training state reset successfully')
     } catch (e) {
       toast.error('Failed to reset: ' + e.message)
     }
+  }
+
+  const resetConfig = () => {
+    setConfig(DEFAULT_CONFIG)
+    toast.success('Model configuration reset')
   }
 
   const isRunning = status.state === 'training' || status.state === 'preparing'
@@ -96,7 +156,13 @@ export default function TrainingDashboard() {
         <p className="text-gray-600 mt-2">Configure and train the LSTM model on your MIDI dataset.</p>
       </div>
 
-      {datasetCount === 0 && (
+      {datasetLoading && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <p className="text-blue-800 text-sm">Checking uploaded MIDI files...</p>
+        </div>
+      )}
+
+      {!datasetLoading && datasetCount === 0 && (
         <div className="bg-orange-100 border border-orange-400 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle size={20} className="text-orange-600 shrink-0 mt-0.5" />
           <div>
@@ -106,14 +172,14 @@ export default function TrainingDashboard() {
         </div>
       )}
 
-      {datasetCount > 0 && (
+      {!datasetLoading && datasetCount > 0 && (
         <div className="bg-green-100 border border-green-400 rounded-xl p-4">
           <p className="text-green-800 text-sm"><span className="font-semibold">{datasetCount}</span> MIDI file{datasetCount !== 1 ? 's' : ''} ready for training</p>
         </div>
       )}
 
       {/* MIDI File Selection */}
-      {midiFiles.length > 0 && (
+      {!datasetLoading && midiFiles.length > 0 && (
         <div className="card space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-800">Select MIDI Files to Train</h3>
@@ -144,7 +210,18 @@ export default function TrainingDashboard() {
 
       {/* Config */}
       <div className="card space-y-5">
-        <h2 className="font-semibold text-gray-800 flex items-center gap-2"><Cpu size={16} className="text-blue-600" /> Model Configuration</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-semibold text-gray-800 flex items-center gap-2"><Cpu size={16} className="text-blue-600" /> Model Configuration</h2>
+          <button
+            type="button"
+            onClick={resetConfig}
+            disabled={isRunning}
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RotateCcw size={14} />
+            Reset
+          </button>
+        </div>
 
         {[
           { key: 'epochs', label: 'Epochs', min: 1, max: 500 },
@@ -159,11 +236,10 @@ export default function TrainingDashboard() {
               onChange={e => set(key, Number(e.target.value))}
               className="w-full accent-blue-500"
             />
-            <div className="flex justify-between text-xs text-gray-600"><span>{min}</span><span>{max}</span></div>
           </div>
         ))}
 
-        <button onClick={handleTrain} disabled={isRunning || datasetCount === 0} className="btn-primary w-full">
+        <button onClick={handleTrain} disabled={isRunning || datasetLoading || datasetCount === 0} className="btn-primary w-full">
           {isRunning ? 'Training in progress...' : 'Start Training'}
         </button>
 
