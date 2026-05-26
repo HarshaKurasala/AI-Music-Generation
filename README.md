@@ -96,15 +96,20 @@ The app will be available at `http://localhost:5173`
 - Training runs in the background; you can close the page
 
 ### 3. **Generate Music** (`/generate`)
-- Set generation parameters:
-  - **Number of Notes**: How long the composition should be (100-200 is nice)
-  - **Temperature**: Controls creativity
-    - Low (0.5): Predictable, structured music
-    - Medium (1.0): Balanced
-    - High (1.5+): Creative, experimental
-  - **Instrument**: Choose from piano, guitar, violin, flute, trumpet, organ
-- Click "Generate"
-- Your new composition will be created!
+- Open the Advanced Composition Studio and set generation parameters:
+  - **Composition Style**: Choose cinematic, ambient, classical, jazz, or electronic.
+  - **Key**: Keeps generated notes inside a selected musical key for cleaner melodies.
+  - **Harmony Layer**: Adds chord voicings around the generated melody.
+  - **Number of Notes**: Controls composition length. 100-200 is good for a short idea; 250+ is better for longer pieces.
+  - **Creativity / Temperature**: Controls randomness.
+    - Low (0.5): Predictable, structured music.
+    - Medium (0.9-1.1): Balanced musical variation.
+    - High (1.5+): More experimental output.
+  - **Tempo**: Sets BPM for the generated MIDI file.
+  - **Density**: Controls how active or spacious the arrangement feels.
+  - **Instrument**: Choose from piano, guitar, violin, flute, trumpet, or organ.
+- Click "Generate Advanced Music"
+- The app creates a MIDI file with scale-aware notes, humanized timing, velocity accents, rests, motifs, and optional harmony.
 
 ### 4. **Listen & Download** (`/results`)
 - Play generated MIDI files in the browser
@@ -125,8 +130,8 @@ The app will be available at `http://localhost:5173`
 1. **Extract**: Parse MIDI files to get individual notes
 2. **Sequence**: Create sliding windows of notes (e.g., "predict note 51 from notes 1-50")
 3. **Train**: Model learns patterns from your data
-4. **Generate**: Model predicts next note based on previous notes, creating new sequences
-5. **Post-Process**: Add rests, vary velocity, create musical phrasing
+4. **Generate**: Model predicts the next notes based on previous musical context
+5. **Arrange**: The advanced generation engine applies key/scale correction, style profiles, harmony, tempo, density, velocity accents, rests, motif repetition, swing, and humanized timing
 
 ## 🎛️ API Endpoints
 
@@ -147,9 +152,14 @@ The app will be available at `http://localhost:5173`
 - **Dataset Quality**: Use MIDI files with clear, consistent musical style
 - **Dataset Size**: 5-10 files minimum; 20+ files for better variety
 - **Training Time**: 50-100 epochs usually works well (takes 5-15 minutes)
-- **Temperature**: Start at 1.0, adjust based on results
+- **Creativity / Temperature**: Start around 0.9-1.1, then adjust based on results
+- **Style**: Use cinematic or classical for structured melodies, ambient for slower textures, jazz for richer chords, and electronic for tighter rhythmic output
+- **Key**: Pick a key that matches your dataset or desired mood; C, D, G, A, and F are good starting points
+- **Harmony**: Turn harmony on for fuller compositions; turn it off for cleaner single-line melodies
+- **Density**: Lower density creates space and rests; higher density creates busier arrangements
+- **Tempo**: Slower tempos work well for ambient/cinematic output, while faster tempos fit jazz/electronic ideas
 - **Sequence Length**: 50 is good for most music; lower for simpler patterns
-- **Post-Processing**: Generated music may need cleanup in a DAW
+- **DAW Polish**: Generated MIDI can be opened in Ableton, FL Studio, Logic, GarageBand, MuseScore, or any MIDI editor for final mixing
 
 ## 🔧 Troubleshooting
 
@@ -182,7 +192,7 @@ The quality depends on:
 - Your training data (garbage in = garbage out)
 - Training duration (more epochs = better learning)
 - Model parameters (sequence length, batch size)
-- Temperature setting (affects creativity vs. coherence)
+- Generation settings such as style, key, temperature, density, tempo, harmony, and instrument
 
 ## 🚀 Future Improvements
 
