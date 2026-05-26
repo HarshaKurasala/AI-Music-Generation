@@ -203,4 +203,5 @@ Found a bug or have an idea? Feel free to open an issue or submit a pull request
 
 ---
 
-**Happy composing! 🎵**
+<img width="1596" height="799" alt="Screenshot 2026-05-25 221250" src="https://github.com/user-attachments/assets/4e720e28-5ab1-475e-8587-7b533e186816" />
+
