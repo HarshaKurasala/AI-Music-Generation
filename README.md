@@ -278,3 +278,6 @@ Download the generated MIDI and open it in a MIDI player or DAW. WAV conversion 
 ## License
 
 Educational and personal use.
+
+<img width="1596" height="799" alt="Screenshot 2026-05-25 221250" src="https://github.com/user-attachments/assets/ce41a53b-73f6-40a4-8ebe-d3f3850d24de" />
+
