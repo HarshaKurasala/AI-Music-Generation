@@ -1,9 +1,19 @@
 {
-  "trained_at": "2026-05-26T11:31:55.679922",
+  "trained_at": "2026-07-10T05:50:40.932100",
   "files": [
     "Pirates of the Caribbean - He's a Pirate (3).mid",
-    "Akhiyaan Gukaab(pianopalmidi.blogspot.com).mid"
+    "Pirates of the Caribbean - He's a Pirate (1).mid",
+    "Pirates of the Caribbean - He's a Pirate (2).mid",
+    "Under-The-Sea-(From-'The-Little-Mermaid')-1.mid",
+    "Never-Gonna-Give-You-Up-3.mid",
+    "FastandfuriousTokyodrift.mid"
   ],
   "model_path": "models/music_model.keras",
-  "vocab_path": "models/vocab.json"
+  "vocab_path": "models/vocab.json",
+  "mongodb": {
+    "stored_in_mongodb": true,
+    "metadata_id": "6a50639ed12f659644e9c7dd",
+    "model_file_id": "6a506385d12f659644e9c71e",
+    "vocab_file_id": "6a50639ed12f659644e9c7db"
+  }
 }

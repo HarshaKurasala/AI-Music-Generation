@@ -1,9 +1,13 @@
 import os
 import logging
+from datetime import datetime, timezone
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import aiofiles
+from pymongo.errors import PyMongoError
+
+import database
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -34,8 +38,32 @@ async def upload_midi(files: list[UploadFile] = File(...)):
             async with aiofiles.open(dest, "wb") as f:
                 content = await file.read()
                 await f.write(content)
+
+            if database.init_mongodb() and database.midi_files_collection is not None:
+                await database.midi_files_collection.update_one(
+                    {"filename": file.filename},
+                    {
+                        "$set": {
+                            "filename": file.filename,
+                            "content_type": file.content_type,
+                            "size": len(content),
+                            "storage": "filesystem",
+                            "path": dest,
+                            "status": "uploaded",
+                            "updated_at": datetime.now(timezone.utc),
+                        },
+                        "$setOnInsert": {
+                            "uploaded_at": datetime.now(timezone.utc),
+                        },
+                    },
+                    upsert=True,
+                )
+
             uploaded.append(file.filename)
             logger.info(f"Uploaded: {file.filename}")
+        except PyMongoError as e:
+            errors.append(f"{file.filename}: Saved file, but MongoDB insert failed: {str(e)}")
+            logger.error(f"MongoDB insert failed for {file.filename}: {e}")
         except Exception as e:
             errors.append(f"{file.filename}: {str(e)}")
 
@@ -55,7 +83,23 @@ async def upload_midi(files: list[UploadFile] = File(...)):
 # Returns list of all MIDI files in dataset directory and count
 # Returns: JSON with files list and count
 @router.get("/dataset-info")
-def dataset_info():
+async def dataset_info():
+    if database.init_mongodb() and database.midi_files_collection is not None:
+        try:
+            cursor = database.midi_files_collection.find(
+                {"status": {"$ne": "deleted"}},
+                {"_id": 0, "filename": 1},
+            ).sort("uploaded_at", -1)
+            records = await cursor.to_list(length=500)
+            files = [
+                record["filename"]
+                for record in records
+                if record.get("filename", "").endswith((".mid", ".midi"))
+            ]
+            return {"files": files, "count": len(files)}
+        except PyMongoError as e:
+            logger.error(f"MongoDB dataset-info failed, falling back to disk: {e}")
+
     if not os.path.exists(UPLOAD_DIR):
         return {"files": [], "count": 0}
 
@@ -66,7 +110,7 @@ def dataset_info():
 # Delete selected MIDI files from the training dataset
 # Validates filenames to prevent deleting files outside the dataset directory
 @router.post("/delete-dataset-files")
-def delete_dataset_files(request: DeleteDatasetFilesRequest):
+async def delete_dataset_files(request: DeleteDatasetFilesRequest):
     if not request.files:
         raise HTTPException(status_code=400, detail="No files specified for deletion")
 
@@ -90,8 +134,21 @@ def delete_dataset_files(request: DeleteDatasetFilesRequest):
                 continue
 
             os.remove(path)
+            if database.init_mongodb() and database.midi_files_collection is not None:
+                await database.midi_files_collection.update_one(
+                    {"filename": filename},
+                    {
+                        "$set": {
+                            "status": "deleted",
+                            "deleted_at": datetime.now(timezone.utc),
+                        }
+                    },
+                )
             deleted.append(filename)
             logger.info(f"Deleted dataset file: {filename}")
+        except PyMongoError as e:
+            errors.append(f"{filename}: File deleted, but MongoDB update failed: {str(e)}")
+            logger.error(f"Failed to update MongoDB for dataset file {filename}: {e}")
         except Exception as e:
             errors.append(f"{filename}: {str(e)}")
             logger.error(f"Failed to delete dataset file {filename}: {e}")

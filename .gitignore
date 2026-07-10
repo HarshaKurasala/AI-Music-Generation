@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 dist-ssr/
+backend/generated_music/
 
 # Python caches and environments
 __pycache__/
@@ -30,3 +31,9 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Trained model binary (large file - train locally)
+backend/models/music_model.keras
+
+# Dataset MIDI files (upload locally via the app)
+backend/dataset/

@@ -1,63 +1,49 @@
-# 🎵 AI Music Generation
+# AI Music Generation
 
-Generate original MIDI music compositions using deep learning! This full-stack web application uses LSTM neural networks to learn from your MIDI dataset and create new, unique musical pieces.
+Generate original MIDI music with an LSTM neural network. This full-stack app lets you upload MIDI files, train a model on them, generate new music, and store project metadata plus trained model files in MongoDB Atlas.
 
-## 🎯 What This Does
+## Tech Stack
 
-Upload your favorite MIDI files → Train an AI model on them → Generate brand new music in the same style. It's like teaching a musician to compose in your favorite genre!
+**Frontend**
+- React + Vite
+- Tailwind CSS
+- Axios
+- React Router
+- Recharts
 
-## 🛠️ Tech Stack
+**Backend**
+- FastAPI
+- TensorFlow/Keras
+- music21
+- PrettyMIDI
+- MongoDB Atlas with GridFS
 
-**Frontend:**
-- React + Vite (fast, modern UI)
-- Tailwind CSS (beautiful styling)
-- Axios (API communication)
-- React Router (page navigation)
-- Recharts (training progress visualization)
+## Project Structure
 
-**Backend:**
-- FastAPI (high-performance Python API)
-- TensorFlow/Keras (deep learning)
-- music21 (MIDI parsing)
-- PrettyMIDI (MIDI generation)
-
-## 📁 Project Structure
-
-```
-music-generation-ai/
-├── frontend/                    # React web interface
-│   ├── src/
-│   │   ├── components/         # UI components (upload, player, progress)
-│   │   ├── pages/              # App pages (home, upload, train, generate, results)
-│   │   └── services/           # API communication (api.js)
-│   └── package.json
-│
-└── backend/                     # Python FastAPI server
-    ├── routes/                 # API endpoints
-    │   ├── midi_routes.py      # Upload & dataset management
-    │   ├── train_routes.py     # Model training
-    │   └── generate_routes.py  # Music generation
-    ├── models/                 # Neural network & saved models
-    │   └── lstm_model.py       # LSTM architecture
-    ├── services/               # Business logic
-    │   ├── training_service.py # Training pipeline
-    │   └── generation_service.py # Music generation
-    ├── utils/                  # Helper functions
-    │   └── midi_utils.py       # MIDI parsing & sequence building
-    ├── dataset/                # Your uploaded MIDI files
-    ├── generated_music/        # Generated MIDI outputs
-    ├── app.py                  # Main FastAPI app
-    └── requirements.txt        # Python dependencies
+```txt
+Music Generation with AI/
+|-- frontend/
+|   |-- src/
+|   |   |-- components/
+|   |   |-- pages/
+|   |   `-- services/
+|   `-- package.json
+|
+`-- backend/
+    |-- app.py
+    |-- database.py
+    |-- requirements.txt
+    |-- dataset/
+    |-- generated_music/
+    |-- models/
+    |-- routes/
+    |-- services/
+    `-- utils/
 ```
 
-## 🚀 Quick Start
+## Setup
 
-### Prerequisites
-- Python 3.9+
-- Node.js 16+
-- Git
-
-### Backend Setup
+### 1. Backend
 
 ```bash
 cd backend
@@ -65,11 +51,40 @@ pip install -r requirements.txt
 uvicorn app:app --reload
 ```
 
-The API will be available at `http://localhost:8000`
-- API docs: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+If you use the project virtual environment on Windows:
 
-### Frontend Setup
+```bash
+cd backend
+..\.venv\Scripts\python.exe -m uvicorn app:app --reload
+```
+
+Backend URL:
+
+```txt
+http://127.0.0.1:8000
+```
+
+The backend root page shows the backend status and available API routes:
+
+```txt
+http://127.0.0.1:8000/
+```
+
+Health check:
+
+```txt
+http://127.0.0.1:8000/health
+```
+
+FastAPI docs are intentionally disabled:
+
+```txt
+/docs         -> 404
+/redoc        -> 404
+/openapi.json -> 404
+```
+
+### 2. Frontend
 
 ```bash
 cd frontend
@@ -77,141 +92,189 @@ npm install
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+On Windows PowerShell, if `npm.ps1` is blocked, use:
 
-## 📖 How to Use
+```bash
+npm.cmd run dev
+```
 
-### 1. **Upload MIDI Files** (`/upload`)
-- Drag & drop or click to select `.mid` or `.midi` files
-- Upload your training dataset (5-10 files recommended for good results)
-- The app will extract all notes from your files
+Frontend URL:
 
-### 2. **Train the Model** (`/train`)
-- Configure training parameters:
-  - **Epochs**: How many times to train (50 is a good start)
-  - **Batch Size**: How many sequences to process at once (64 is standard)
-  - **Sequence Length**: How many notes the model looks at to predict the next one (50 is good)
-- Click "Start Training"
-- Watch real-time progress: loss decreasing = model improving
-- Training runs in the background; you can close the page
+```txt
+http://127.0.0.1:5173
+```
 
-### 3. **Generate Music** (`/generate`)
-- Open the Advanced Composition Studio and set generation parameters:
-  - **Composition Style**: Choose cinematic, ambient, classical, jazz, or electronic.
-  - **Key**: Keeps generated notes inside a selected musical key for cleaner melodies.
-  - **Harmony Layer**: Adds chord voicings around the generated melody.
-  - **Number of Notes**: Controls composition length. 100-200 is good for a short idea; 250+ is better for longer pieces.
-  - **Creativity / Temperature**: Controls randomness.
-    - Low (0.5): Predictable, structured music.
-    - Medium (0.9-1.1): Balanced musical variation.
-    - High (1.5+): More experimental output.
-  - **Tempo**: Sets BPM for the generated MIDI file.
-  - **Density**: Controls how active or spacious the arrangement feels.
-  - **Instrument**: Choose from piano, guitar, violin, flute, trumpet, or organ.
-- Click "Generate Advanced Music"
-- The app creates a MIDI file with scale-aware notes, humanized timing, velocity accents, rests, motifs, and optional harmony.
+## MongoDB Setup
 
-### 4. **Listen & Download** (`/results`)
-- Play generated MIDI files in the browser
-- Download files to use in your DAW (Ableton, FL Studio, etc.)
-- Delete files you don't want to keep
+Create `backend/.env`:
 
-## 🧠 How It Works
+```env
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/?appName=<cluster-name>
+MONGODB_DB=music_generation_ai
+UPLOAD_DIR=dataset
+OUTPUT_DIR=generated_music
+```
 
-### The AI Model
-- **LSTM (Long Short-Term Memory)**: A type of neural network that's great at learning sequences
-- **3-Layer Architecture**: 
-  - Layer 1: Learns basic note transitions
-  - Layer 2: Learns melodic phrases
-  - Layer 3: Learns overall composition structure
-- **Dropout & Batch Normalization**: Prevents overfitting and stabilizes training
+In MongoDB Atlas:
 
-### The Process
-1. **Extract**: Parse MIDI files to get individual notes
-2. **Sequence**: Create sliding windows of notes (e.g., "predict note 51 from notes 1-50")
-3. **Train**: Model learns patterns from your data
-4. **Generate**: Model predicts the next notes based on previous musical context
-5. **Arrange**: The advanced generation engine applies key/scale correction, style profiles, harmony, tempo, density, velocity accents, rests, motif repetition, swing, and humanized timing
+1. Create a cluster.
+2. Create a database user.
+3. Add your current IP address in Network Access.
+4. Copy the Python driver connection string.
+5. Put it in `backend/.env` as `MONGODB_URI`.
 
-## 🎛️ API Endpoints
+The app uses MongoDB for:
+
+- Uploaded MIDI metadata
+- Generated music metadata
+- Trained model metadata
+- Trained `.keras` model and `vocab.json` files through GridFS
+
+MongoDB collections used:
+
+```txt
+midi_files
+generated_files
+model_metadata
+model_files.files
+model_files.chunks
+```
+
+## How To Use
+
+### 1. Upload MIDI Files
+
+Open the frontend upload page and upload `.mid` or `.midi` files. Files are saved locally in `backend/dataset/` so the training pipeline can parse them, and metadata is saved in MongoDB when available.
+
+### 2. Train The Model
+
+Open the training page and start training. The backend trains an LSTM model and saves:
+
+```txt
+backend/models/music_model.keras
+backend/models/vocab.json
+backend/models/model_metadata.json
+```
+
+After training finishes, the backend also tries to upload the trained model and vocabulary to MongoDB GridFS.
+
+### 3. Sync Existing Trained Model To MongoDB
+
+If you trained before MongoDB was connected, run:
+
+```txt
+POST /api/sync-trained-model
+```
+
+Example with PowerShell:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/api/sync-trained-model
+```
+
+Successful response includes:
+
+```txt
+stored_in_mongodb: true
+model_file_id: ...
+vocab_file_id: ...
+metadata_id: ...
+```
+
+### 4. Generate Music
+
+Open the generate page and choose:
+
+- Style
+- Key
+- Tempo
+- Instrument
+- Creativity/temperature
+- Density
+- Harmony on/off
+- Number of notes
+
+Generated files are saved in:
+
+```txt
+backend/generated_music/
+```
+
+Generated file metadata is saved in MongoDB when available.
+
+## API Endpoints
 
 | Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/health` | Check if API is running |
+| --- | --- | --- |
+| GET | `/` | Backend status and route list |
+| GET | `/health` | Backend health check |
 | POST | `/api/upload-midi` | Upload MIDI files |
-| GET | `/api/dataset-info` | List uploaded files |
-| POST | `/api/train-model` | Start training |
+| GET | `/api/dataset-info` | List uploaded MIDI files |
+| POST | `/api/delete-dataset-files` | Delete selected dataset files |
+| POST | `/api/train-model` | Start model training |
 | GET | `/api/training-status` | Get training progress |
-| POST | `/api/generate-music` | Generate new music |
-| GET | `/api/generated-files` | List generated files |
-| GET | `/api/download/{filename}` | Download MIDI file |
-| POST | `/api/delete-generated-files` | Delete files |
+| POST | `/api/reset-training` | Reset stuck training state |
+| GET | `/api/trained-model-info` | Get saved model metadata |
+| POST | `/api/sync-trained-model` | Upload saved trained model to MongoDB GridFS |
+| POST | `/api/generate-music` | Generate a new MIDI file |
+| GET | `/api/generated-files` | List generated MIDI files |
+| GET | `/api/download/{filename}` | Download a generated MIDI file |
+| POST | `/api/delete-generated-files` | Delete selected generated files |
 
-## 💡 Tips for Best Results
+## Notes About Storage
 
-- **Dataset Quality**: Use MIDI files with clear, consistent musical style
-- **Dataset Size**: 5-10 files minimum; 20+ files for better variety
-- **Training Time**: 50-100 epochs usually works well (takes 5-15 minutes)
-- **Creativity / Temperature**: Start around 0.9-1.1, then adjust based on results
-- **Style**: Use cinematic or classical for structured melodies, ambient for slower textures, jazz for richer chords, and electronic for tighter rhythmic output
-- **Key**: Pick a key that matches your dataset or desired mood; C, D, G, A, and F are good starting points
-- **Harmony**: Turn harmony on for fuller compositions; turn it off for cleaner single-line melodies
-- **Density**: Lower density creates space and rests; higher density creates busier arrangements
-- **Tempo**: Slower tempos work well for ambient/cinematic output, while faster tempos fit jazz/electronic ideas
-- **Sequence Length**: 50 is good for most music; lower for simpler patterns
-- **DAW Polish**: Generated MIDI can be opened in Ableton, FL Studio, Logic, GarageBand, MuseScore, or any MIDI editor for final mixing
+The app still keeps MIDI files and trained models on disk because TensorFlow, music21, and PrettyMIDI work best with normal files. MongoDB stores metadata and GridFS copies of trained model artifacts.
 
-## 🔧 Troubleshooting
+For large model files, MongoDB GridFS is required because normal MongoDB documents have a 16 MB document limit.
 
-**"No MIDI files found"**
-- Make sure you uploaded files to `/upload` first
-- Check file extensions are `.mid` or `.midi`
+## Troubleshooting
 
-**"Model not found"**
-- Train the model first on `/train`
-- Wait for training to complete
+**Backend shows `{"detail":"Not Found"}`**
 
-**"Not enough training sequences"**
-- Upload more MIDI files
-- Reduce sequence length
-- Ensure MIDI files have enough notes
+Use the root URL:
 
-**MIDI playback not working in browser**
-- Download the file and open in a MIDI player (VLC, GarageBand, MuseScore)
-- Install FluidSynth for WAV conversion support
+```txt
+http://127.0.0.1:8000/
+```
 
-## 📊 Training Metrics
+`/docs` is disabled intentionally.
 
-- **Loss**: How wrong the model is (lower is better)
-- **Accuracy**: How often the model predicts correctly
-- Watch for loss decreasing over epochs = model learning
+**MongoDB sync says `stored_in_mongodb: false`**
 
-## 🎼 Generated Music Quality
+Check MongoDB Atlas Network Access and add your current IP address. Then retry:
 
-The quality depends on:
-- Your training data (garbage in = garbage out)
-- Training duration (more epochs = better learning)
-- Model parameters (sequence length, batch size)
-- Generation settings such as style, key, temperature, density, tempo, harmony, and instrument
+```txt
+POST /api/sync-trained-model
+```
 
-## 🚀 Future Improvements
+**PowerShell blocks npm**
 
-- Multi-instrument support
-- Real-time MIDI playback in browser
-- Model comparison and versioning
-- Advanced post-processing
-- Export to MusicXML
-- Web-based MIDI editor
+Use:
 
-## 📝 License
+```bash
+npm.cmd run dev
+```
 
-This project is open source and available for educational and personal use.
+**Model not found**
 
-## 🤝 Contributing
+Train the model first from the frontend training page.
 
-Found a bug or have an idea? Feel free to open an issue or submit a pull request!
+**No MIDI files found**
 
----
+Upload `.mid` or `.midi` files from the frontend upload page.
 
-<img width="1596" height="799" alt="Screenshot 2026-05-25 221250" src="https://github.com/user-attachments/assets/4e720e28-5ab1-475e-8587-7b533e186816" />
+**MIDI playback does not work in browser**
 
+Download the generated MIDI and open it in a MIDI player or DAW. WAV conversion needs FluidSynth installed separately.
+
+## Training Tips
+
+- Use MIDI files with a clear, consistent style.
+- Start with 5-10 files.
+- Use 50 epochs for a first run.
+- Use sequence length 50 for most datasets.
+- Loss should generally decrease during training.
+
+## License
+
+Educational and personal use.

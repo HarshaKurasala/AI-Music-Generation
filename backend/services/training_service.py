@@ -8,6 +8,7 @@ import tensorflow as tf
 
 from utils.midi_utils import load_all_notes, build_sequences
 from models.lstm_model import build_lstm_model
+from database import store_trained_model_files
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +138,7 @@ class TrainingService:
                 "model_path": MODEL_PATH,
                 "vocab_path": VOCAB_PATH
             }
+            metadata["mongodb"] = store_trained_model_files(MODEL_PATH, VOCAB_PATH, metadata)
             os.makedirs("models", exist_ok=True)
             with open(MODEL_METADATA_PATH, "w") as f:
                 json.dump(metadata, f, indent=2)
@@ -162,3 +164,13 @@ class TrainingService:
             "model_path": MODEL_PATH,
             "vocab_path": VOCAB_PATH
         }
+
+    def sync_trained_model_to_mongodb(self) -> dict:
+        metadata = self.get_trained_model_info()
+        metadata["mongodb"] = store_trained_model_files(MODEL_PATH, VOCAB_PATH, metadata)
+
+        os.makedirs("models", exist_ok=True)
+        with open(MODEL_METADATA_PATH, "w") as f:
+            json.dump(metadata, f, indent=2)
+
+        return metadata

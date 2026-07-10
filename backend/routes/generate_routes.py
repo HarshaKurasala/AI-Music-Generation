@@ -1,10 +1,13 @@
 import os
 import logging
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
+from pymongo.errors import PyMongoError
 
 from services.generation_service import GenerationService
+import database
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -29,7 +32,7 @@ class GenerateRequest(BaseModel):
 # Parameters: request (generation configuration with num_notes, temperature, instrument)
 # Returns: JSON with generated filename and download URL
 @router.post("/generate-music")
-def generate_music(request: GenerateRequest):
+async def generate_music(request: GenerateRequest):
     try:
         filename = generation_service.generate(
             num_notes=request.num_notes,
@@ -41,12 +44,32 @@ def generate_music(request: GenerateRequest):
             density=request.density,
             harmony=request.harmony
         )
-        return JSONResponse({
+
+        db_warning = None
+        if database.init_mongodb() and database.generated_files_collection is not None:
+            try:
+                await database.generated_files_collection.insert_one({
+                    "filename": filename,
+                    "path": os.path.join(OUTPUT_DIR, filename),
+                    "download_url": f"/api/download/{filename}",
+                    "stream_url": f"/generated_music/{filename}",
+                    "parameters": request.model_dump(),
+                    "created_at": datetime.now(timezone.utc),
+                    "status": "generated",
+                })
+            except PyMongoError as e:
+                db_warning = f"MongoDB insert failed: {e}"
+                logger.error(f"MongoDB generated file insert error: {e}")
+
+        response = {
             "filename": filename,
             "download_url": f"/api/download/{filename}",
             "stream_url": f"/generated_music/{filename}",
             "message": "Music generated successfully"
-        })
+        }
+        if db_warning:
+            response["warning"] = db_warning
+        return JSONResponse(response)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -70,7 +93,23 @@ def download_file(filename: str):
 # Returns list of all generated MIDI files sorted by newest first
 # Returns: JSON with list of generated files
 @router.get("/generated-files")
-def list_generated():
+async def list_generated():
+    if database.init_mongodb() and database.generated_files_collection is not None:
+        try:
+            cursor = database.generated_files_collection.find(
+                {"status": {"$ne": "deleted"}},
+                {"_id": 0, "filename": 1},
+            ).sort("created_at", -1)
+            records = await cursor.to_list(length=500)
+            files = [
+                record["filename"]
+                for record in records
+                if record.get("filename", "").endswith(".mid")
+            ]
+            return {"files": files}
+        except PyMongoError as e:
+            logger.error(f"MongoDB generated-files failed, falling back to disk: {e}")
+
     if not os.path.exists(OUTPUT_DIR):
         return {"files": []}
     files = sorted(
@@ -89,7 +128,7 @@ class DeleteFilesRequest(BaseModel):
 # Parameters: request (list of filenames to delete)
 # Returns: JSON with deleted files and any errors
 @router.post("/delete-generated-files")
-def delete_generated_files(request: DeleteFilesRequest):
+async def delete_generated_files(request: DeleteFilesRequest):
     if not request.files:
         raise HTTPException(status_code=400, detail="No files specified for deletion")
     
@@ -108,8 +147,21 @@ def delete_generated_files(request: DeleteFilesRequest):
                 continue
             
             os.remove(path)
+            if database.init_mongodb() and database.generated_files_collection is not None:
+                await database.generated_files_collection.update_one(
+                    {"filename": filename},
+                    {
+                        "$set": {
+                            "status": "deleted",
+                            "deleted_at": datetime.now(timezone.utc),
+                        }
+                    },
+                )
             deleted.append(filename)
             logger.info(f"Deleted file: {filename}")
+        except PyMongoError as e:
+            errors.append(f"{filename}: File deleted, but MongoDB update failed: {str(e)}")
+            logger.error(f"Failed to update MongoDB for generated file {filename}: {e}")
         except Exception as e:
             errors.append(f"{filename}: {str(e)}")
             logger.error(f"Failed to delete {filename}: {e}")

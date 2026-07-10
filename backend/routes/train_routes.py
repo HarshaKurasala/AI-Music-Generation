@@ -69,3 +69,8 @@ def reset_training():
 @router.get("/trained-model-info")
 def get_trained_model_info():
     return training_service.get_trained_model_info()
+
+
+@router.post("/sync-trained-model")
+def sync_trained_model():
+    return training_service.sync_trained_model_to_mongodb()
